@@ -6,6 +6,18 @@ The application is built using **Python, Pandas, Scikit-learn, Joblib, and Strea
 
 ---
 
+🚀 Live Demo
+
+👉 [Try the Live Demo](YOUR_STREAMLIT_APP_LINK)**
+
+> Enter customer information and get an instant churn prediction with churn probability.
+
+💻 GitHub Repository
+
+👉  [View Source Code](https://github.com/Kamleshkumarmandal/-customer-churn-prediction)**
+
+---
+
 🚀 Project Overview
 
 Customer churn refers to customers leaving a company or stopping its services.
