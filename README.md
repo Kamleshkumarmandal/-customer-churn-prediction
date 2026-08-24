@@ -8,13 +8,15 @@ The application is built using **Python, Pandas, Scikit-learn, Joblib, and Strea
 
 🚀 Live Demo
 
-👉 [Try the Live Demo](YOUR_STREAMLIT_APP_LINK)**
+🚀 [Try the Live Demo][Customer Churn Prediction App]
+ 👉 (https://xehxu2yce6rztlb6m3v65r.streamlit.app/)
 
 > Enter customer information and get an instant churn prediction with churn probability.
 
 💻 GitHub Repository
 
-👉  [View Source Code](https://github.com/Kamleshkumarmandal/-customer-churn-prediction)**
+🚀  [View Source Code]
+  👉 (https://github.com/Kamleshkumarmandal/-customer-churn-prediction)
 
 ---
 
