@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import joblib
@@ -12,18 +13,22 @@ st.set_page_config(
 )
 
 # -----------------------------
-# LOAD MODEL
+# LOAD TRAINED MODEL
 # -----------------------------
-model = joblib.load("churn_model.pkl")
-model = joblib.load("churn_model.pkl")
+@st.cache_resource
+def load_model():
+    return joblib.load("churn_model.pkl")
+
+model = load_model()
 
 # -----------------------------
 # HEADER
 # -----------------------------
 st.title("📊 Customer Churn Prediction")
+
 st.write(
-    "Enter customer information below to predict the probability "
-    "of customer churn."
+    "Enter customer information below to predict "
+    "the probability of customer churn."
 )
 
 st.divider()
@@ -39,23 +44,19 @@ with st.form("churn_form"):
 
     with col1:
         gender = st.selectbox(
-            "Gender",
-            ["Female", "Male"]
+            "Gender", ["Female", "Male"]
         )
 
         senior_citizen = st.selectbox(
-            "Senior Citizen",
-            [0, 1]
+            "Senior Citizen", [0, 1]
         )
 
         partner = st.selectbox(
-            "Partner",
-            ["Yes", "No"]
+            "Partner", ["Yes", "No"]
         )
 
         dependents = st.selectbox(
-            "Dependents",
-            ["Yes", "No"]
+            "Dependents", ["Yes", "No"]
         )
 
         tenure = st.number_input(
@@ -67,8 +68,7 @@ with st.form("churn_form"):
 
     with col2:
         phone_service = st.selectbox(
-            "Phone Service",
-            ["Yes", "No"]
+            "Phone Service", ["Yes", "No"]
         )
 
         multiple_lines = st.selectbox(
@@ -124,8 +124,7 @@ with st.form("churn_form"):
 
     with col2:
         paperless_billing = st.selectbox(
-            "Paperless Billing",
-            ["Yes", "No"]
+            "Paperless Billing", ["Yes", "No"]
         )
 
     with col3:
@@ -145,17 +144,17 @@ with st.form("churn_form"):
         monthly_charges = st.number_input(
             "Monthly Charges",
             min_value=0.0,
-            value=70.0
+            value=70.0,
+            step=1.0
         )
 
     with col2:
         total_charges = st.number_input(
             "Total Charges",
             min_value=0.0,
-            value=1000.0
+            value=840.0,
+            step=1.0
         )
-
-    st.write("")
 
     submit = st.form_submit_button(
         "🔮 Predict Churn",
@@ -168,24 +167,15 @@ with st.form("churn_form"):
 # -----------------------------
 if submit:
 
-    # Create blank row with model features
-    customer_data = pd.DataFrame(
-        0,
-        index=[0],
-        columns=feature_columns
-    )
+    # Create customer data using the ORIGINAL
+    # columns used during model training.
 
-    # Numeric features
-    customer_data["SeniorCitizen"] = senior_citizen
-    customer_data["tenure"] = tenure
-    customer_data["MonthlyCharges"] = monthly_charges
-    customer_data["TotalCharges"] = total_charges
-
-    # Categorical features
-    categorical_data = {
+    customer_data = pd.DataFrame([{
         "gender": gender,
+        "SeniorCitizen": senior_citizen,
         "Partner": partner,
         "Dependents": dependents,
+        "tenure": tenure,
         "PhoneService": phone_service,
         "MultipleLines": multiple_lines,
         "InternetService": internet_service,
@@ -197,88 +187,79 @@ if submit:
         "StreamingMovies": streaming_movies,
         "Contract": contract,
         "PaperlessBilling": paperless_billing,
-        "PaymentMethod": payment_method
-    }
+        "PaymentMethod": payment_method,
+        "MonthlyCharges": monthly_charges,
+        "TotalCharges": total_charges
+    }])
 
-    # Convert categorical input to dummy variables
-    for column, value in categorical_data.items():
+    try:
+        # Predict customer churn
+        prediction = model.predict(customer_data)[0]
 
-        feature_name = f"{column}_{value}"
+        # Get probability of class 1 (Churn = Yes)
+        churn_class_index = list(model.classes_).index(1)
 
-        if feature_name in customer_data.columns:
-            customer_data.loc[0, feature_name] = 1
+        churn_probability = model.predict_proba(
+            customer_data
+        )[0][churn_class_index]
 
-    # Prediction
-    prediction = model.predict(customer_data)[0]
+        # -----------------------------
+        # DISPLAY RESULTS
+        # -----------------------------
+        st.divider()
+        st.subheader("📈 Prediction Result")
 
-    churn_probability = model.predict_proba(
-        customer_data
-    )[0][1]
+        result_col1, result_col2, result_col3 = st.columns(3)
 
-    # -----------------------------
-    # RESULT
-    # -----------------------------
+        with result_col1:
+            st.metric(
+                "Churn Probability",
+                f"{churn_probability * 100:.2f}%"
+            )
 
-    st.divider()
+        with result_col2:
+            if churn_probability >= 0.70:
+                risk = "High Risk"
+            elif churn_probability >= 0.40:
+                risk = "Medium Risk"
+            else:
+                risk = "Low Risk"
 
-    st.subheader("📈 Prediction Result")
+            st.metric("Risk Level", risk)
 
-    result_col1, result_col2, result_col3 = st.columns(3)
+        with result_col3:
+            result = (
+                "Likely to Churn"
+                if prediction == 1
+                else "Likely to Stay"
+            )
 
-    with result_col1:
-        st.metric(
-            "Churn Probability",
-            f"{churn_probability * 100:.2f}%"
-        )
+            st.metric("Prediction", result)
 
-    with result_col2:
-
-        if churn_probability >= 0.70:
-            risk = "High Risk"
-        elif churn_probability >= 0.40:
-            risk = "Medium Risk"
-        else:
-            risk = "Low Risk"
-
-        st.metric(
-            "Risk Level",
-            risk
-        )
-
-    with result_col3:
+        # -----------------------------
+        # RESULT MESSAGE
+        # -----------------------------
+        st.progress(float(churn_probability))
 
         if prediction == 1:
-            result = "Likely to Churn"
+            st.error(
+                "⚠️ This customer is likely to CHURN."
+            )
+
+            st.write(
+                "The company may consider customer "
+                "retention actions."
+            )
+
         else:
-            result = "Likely to Stay"
+            st.success(
+                "✅ This customer is likely to STAY."
+            )
 
-        st.metric(
-            "Prediction",
-            result
-        )
+            st.write(
+                "The customer is currently predicted "
+                "to remain with the company."
+            )
 
-    # -----------------------------
-    # RESULT MESSAGE
-    # -----------------------------
-
-    if prediction == 1:
-
-        st.error(
-            "⚠️ This customer is likely to CHURN."
-        )
-
-        st.write(
-            "The company may consider taking customer retention "
-            "actions for this customer."
-        )
-
-    else:
-
-        st.success(
-            "✅ This customer is likely to STAY."
-        )
-
-        st.write(
-            "The customer currently shows a lower probability "
-            "of churn."
-        )
+    except Exception as e:
+        st.error(f"Prediction error: {e}")
